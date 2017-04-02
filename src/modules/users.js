@@ -2,6 +2,7 @@ import { createAction } from 'redux-actions';
 import { takeLatest } from 'redux-saga/effects';
 import { schema } from 'normalizr';
 import { createSelector } from 'reselect';
+import orderBy from 'lodash/orderBy';
 import callApi from './util/api';
 
 // action types
@@ -10,10 +11,12 @@ const FETCH_REQUEST = 'demo/users/FETCH_REQUEST';
 const FETCH_SUCCESS = 'demo/users/FETCH_SUCCESS';
 const FETCH_ERROR = 'demo/users/FETCH_ERROR';
 const SEARCH = 'demo/users/SEARCH';
+const SORT = 'demo/users/SORT';
 
 // action creators
 export const fetchUsers = createAction(FETCH);
 export const searchUsers = createAction(SEARCH);
+export const sortUsers = createAction(SORT);
 
 
 // schemas
@@ -46,6 +49,10 @@ const searchSelector = ({
   users: { search }
 }) => search;
 
+const sortSelector = ({
+  users: { ascending }
+}) => ascending;
+
 const currentUserSelector = ({
   entities: { users }
 }, {
@@ -58,9 +65,12 @@ export const getUsers = createSelector(
 );
 
 export const getSearchUsers = createSelector(
-  [ usersSelector, searchSelector ],
-  (users, search) => users
+  [ usersSelector, searchSelector, sortSelector ],
+  (users, search, ascending) => orderBy(users
     .filter(({ name }) => !search || name.toLowerCase().indexOf(search) >= 0),
+    ['name'],
+    ascending ? ['asc'] : ['desc'],
+  ),
 );
 
 export const getCurrentUser = createSelector(
@@ -75,6 +85,7 @@ const initialState = {
   isFetching: true,
   error: null,
   search: '',
+  ascending: true,
 };
 
 export default (state = initialState, { type, payload, response }) => {
@@ -101,6 +112,11 @@ export default (state = initialState, { type, payload, response }) => {
       return {
         ...state,
         search: payload.toLowerCase(),
+      };
+    case SORT:
+      return {
+        ...state,
+        ascending: payload,
       };
     default:
       return state;
